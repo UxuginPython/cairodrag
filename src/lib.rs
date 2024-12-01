@@ -1,12 +1,40 @@
 use cairo::{Context, Error};
 use gtk4::{cairo, glib::clone, prelude::*, DrawingArea};
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
+enum Reference<T: ?Sized> {
+    Box(Box<T>),
+    Rc(Rc<T>),
+    RcRefCell(Rc<RefCell<T>>),
+}
+impl<T: ?Sized> Reference<T> {
+    fn borrow(&self) -> ReferenceBorrow<'_, T> {
+        match self {
+            Self::Box(boxx) => ReferenceBorrow::NormalReference(boxx),
+            Self::Rc(rc) => ReferenceBorrow::NormalReference(rc),
+            Self::RcRefCell(rc_ref_cell) => ReferenceBorrow::RefCellBorrow(rc_ref_cell.borrow()),
+        }
+    }
+}
+enum ReferenceBorrow<'a, T: ?Sized> {
+    NormalReference(&'a T),
+    RefCellBorrow(std::cell::Ref<'a, T>),
+}
+impl<T: ?Sized> Deref for ReferenceBorrow<'_, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        match self {
+            Self::NormalReference(x) => x,
+            Self::RefCellBorrow(x) => x,
+        }
+    }
+}
 pub trait Draggable {
     fn draw(&self, context: &Context, x: f64, y: f64) -> Result<(), Error>;
 }
 struct DraggableSetHolder {
-    draggables: Vec<Rc<RefCell<dyn Draggable>>>,
+    draggables: Vec<Reference<dyn Draggable>>,
 }
 impl DraggableSetHolder {
     fn new() -> Self {
