@@ -42,13 +42,26 @@ impl DraggableSetHolder {
             draggables: Vec::new(),
         }
     }
-    /*fn iter(&self) -> std::slice::Iter<Rc<RefCell<dyn Draggable>>> {
-        self.draggables.iter()
-    }*/
-    fn for_each(&self, mut func: impl FnMut(&dyn Draggable) -> ()) {
-        for i in &self.draggables {
-            func(&*i.borrow());
+    fn iter(&self) -> DraggableSetHolderIterator<'_> {
+        DraggableSetHolderIterator {
+            holder: self, //This is a reference
+            index: 0,
         }
+    }
+}
+struct DraggableSetHolderIterator<'a> {
+    holder: &'a DraggableSetHolder,
+    index: usize,
+}
+impl<'a> Iterator for DraggableSetHolderIterator<'a> {
+    type Item = ReferenceBorrow<'a, dyn Draggable>;
+    fn next(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
+        if self.index >= self.holder.draggables.len() {
+            return None;
+        }
+        let output = self.holder.draggables[self.index].borrow();
+        self.index += 1;
+        Some(output)
     }
 }
 pub struct DragArea {
@@ -69,9 +82,10 @@ impl DragArea {
                 /*for i in draggables.borrow().iter().rev() {
                     i.borrow().draw(&context, 0.0, 0.0).unwrap();
                 }*/
-                draggables.borrow().for_each(|x| {
+                /*draggables.borrow().for_each(|x| {
                     x.draw(&context, 0.0, 0.0).unwrap();
-                });
+                });*/
+                todo!();
             }
         ));
         Self {
