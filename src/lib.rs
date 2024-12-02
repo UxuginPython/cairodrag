@@ -1,5 +1,5 @@
 use cairo::{Context, Error};
-use glib::{clone, Object};
+use glib::Object;
 use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea};
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -100,7 +100,7 @@ pub struct AsdfDragArea {
     draggables: Rc<RefCell<DraggableSetHolder>>,
 }
 impl AsdfDragArea {
-    pub fn new(width: i32, height: i32) -> Self {
+    pub fn new() -> Self {
         let draggables = Rc::new(RefCell::new(DraggableSetHolder::new()));
         Self {
             draggables: draggables,
