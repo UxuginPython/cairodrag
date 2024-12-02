@@ -79,7 +79,7 @@ struct DraggableSetHolderIterator<'a> {
 impl<'a> Iterator for DraggableSetHolderIterator<'a> {
     type Item = ReferenceBorrow<'a, dyn Draggable>;
     fn next(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
-        if self.index_start >= self.holder.draggables.len() || self.index_start >= self.index_back {
+        if self.index_start >= self.holder.draggables.len() || self.index_start > self.index_back {
             return None;
         }
         let output = self.holder.draggables[self.index_start].borrow();
@@ -90,7 +90,7 @@ impl<'a> Iterator for DraggableSetHolderIterator<'a> {
 impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
     fn next_back(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
         //usize type keeps it from going below zero
-        if self.index_back <= self.index_start {
+        if self.index_back < self.index_start {
             return None;
         }
         let output = self.holder.draggables[self.index_back].borrow();
@@ -108,17 +108,17 @@ impl AsdfDragArea {
             draggables: draggables,
         }
     }
-    pub fn push_box(&mut self, item: Box<impl Draggable + 'static>) {
+    pub fn push_box(&self, item: Box<impl Draggable + 'static>) {
         self.draggables
             .borrow_mut()
             .push((item as Box<dyn Draggable>).into());
     }
-    pub fn push_rc(&mut self, item: Rc<impl Draggable + 'static>) {
+    pub fn push_rc(&self, item: Rc<impl Draggable + 'static>) {
         self.draggables
             .borrow_mut()
             .push((item as Rc<dyn Draggable>).into());
     }
-    pub fn push_rc_ref_cell(&mut self, item: Rc<RefCell<impl Draggable + 'static>>) {
+    pub fn push_rc_ref_cell(&self, item: Rc<RefCell<impl Draggable + 'static>>) {
         self.draggables
             .borrow_mut()
             .push((item as Rc<RefCell<dyn Draggable>>).into());
@@ -143,7 +143,8 @@ impl ObjectImpl for AsdfDragArea {
         let my_draggables = self.draggables.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
-                for i in my_draggables.borrow().iter().rev() {
+                //for i in my_draggables.borrow().iter().rev() {
+                for i in my_draggables.borrow().iter() {
                     i.draw(&context, 0.0, 0.0).unwrap();
                 }
                 //todo!();
@@ -163,5 +164,9 @@ impl DragArea {
             .property("width_request", width)
             .property("height_request", height)
             .build()
+    }
+    pub fn push_box(&mut self, item: Box<impl Draggable + 'static>) {
+        let selff = AsdfDragArea::from_obj(self);
+        selff.push_box(item);
     }
 }
