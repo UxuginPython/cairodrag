@@ -62,10 +62,12 @@ impl DraggableSetHolder {
         self.draggables.push(item);
     }
     fn iter(&self) -> DraggableSetHolderIterator<'_> {
+        let len = self.draggables.len();
+        let index_back = if len >= 1 { len - 1 } else { 0 };
         DraggableSetHolderIterator {
             holder: self, //This is a reference
             index_start: 0,
-            index_back: self.draggables.len() - 1,
+            index_back: index_back,
         }
     }
 }
@@ -144,7 +146,7 @@ impl ObjectImpl for AsdfDragArea {
                 for i in my_draggables.borrow().iter().rev() {
                     i.draw(&context, 0.0, 0.0).unwrap();
                 }
-                todo!();
+                //todo!();
             });
     }
 }
@@ -158,8 +160,8 @@ glib::wrapper! {
 impl DragArea {
     pub fn new(width: i32, height: i32) -> Self {
         Object::builder()
-            .property("width", width)
-            .property("height", height)
+            .property("width_request", width)
+            .property("height_request", height)
             .build()
     }
 }

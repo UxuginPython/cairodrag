@@ -15,4 +15,5 @@ fn build_ui(app: &Application) {
         .child(&drag_area)
         .build();
     window.present();
+    //panic!("LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME LOOK AT ME");
 }
