@@ -17,6 +17,21 @@ impl<T: ?Sized> Reference<T> {
         }
     }
 }
+impl<T: ?Sized> From<Box<T>> for Reference<T> {
+    fn from(was: Box<T>) -> Self {
+        Self::Box(was)
+    }
+}
+impl<T: ?Sized> From<Rc<T>> for Reference<T> {
+    fn from(was: Rc<T>) -> Self {
+        Self::Rc(was)
+    }
+}
+impl<T: ?Sized> From<Rc<RefCell<T>>> for Reference<T> {
+    fn from(was: Rc<RefCell<T>>) -> Self {
+        Self::RcRefCell(was)
+    }
+}
 enum ReferenceBorrow<'a, T: ?Sized> {
     NormalReference(&'a T),
     RefCellBorrow(std::cell::Ref<'a, T>),
@@ -41,6 +56,9 @@ impl DraggableSetHolder {
         Self {
             draggables: Vec::new(),
         }
+    }
+    fn push(&mut self, item: Reference<dyn Draggable>) {
+        self.draggables.push(item);
     }
     fn iter(&self) -> DraggableSetHolderIterator<'_> {
         DraggableSetHolderIterator {
@@ -102,5 +120,20 @@ impl DragArea {
             drawing_area: drawing_area,
             draggables: draggables,
         }
+    }
+    pub fn push_box(&mut self, item: Box<impl Draggable + 'static>) {
+        self.draggables
+            .borrow_mut()
+            .push((item as Box<dyn Draggable>).into());
+    }
+    pub fn push_rc(&mut self, item: Rc<impl Draggable + 'static>) {
+        self.draggables
+            .borrow_mut()
+            .push((item as Rc<dyn Draggable>).into());
+    }
+    pub fn push_rc_ref_cell(&mut self, item: Rc<RefCell<impl Draggable + 'static>>) {
+        self.draggables
+            .borrow_mut()
+            .push((item as Rc<RefCell<dyn Draggable>>).into());
     }
 }
