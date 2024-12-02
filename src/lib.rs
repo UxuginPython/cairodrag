@@ -1,5 +1,6 @@
 use cairo::{Context, Error};
-use gtk4::{cairo, glib::clone, prelude::*, DrawingArea};
+use glib::{clone, Object};
+use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea};
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -95,11 +96,11 @@ impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
         Some(output)
     }
 }
-pub struct DragArea {
+pub struct AsdfDragArea {
     drawing_area: DrawingArea,
     draggables: Rc<RefCell<DraggableSetHolder>>,
 }
-impl DragArea {
+impl AsdfDragArea {
     pub fn new(width: i32, height: i32) -> Self {
         let draggables = Rc::new(RefCell::new(DraggableSetHolder::new()));
         let drawing_area = DrawingArea::builder()
@@ -135,5 +136,35 @@ impl DragArea {
         self.draggables
             .borrow_mut()
             .push((item as Rc<RefCell<dyn Draggable>>).into());
+    }
+}
+impl Default for AsdfDragArea {
+    fn default() -> Self {
+        Self {
+            drawing_area: DrawingArea::new(),
+            draggables: Rc::new(RefCell::new(DraggableSetHolder::new())),
+        }
+    }
+}
+#[glib::object_subclass]
+impl ObjectSubclass for AsdfDragArea {
+    const NAME: &'static str = "CairoDragDragArea";
+    type Type = DragArea;
+    type ParentType = DrawingArea;
+}
+impl ObjectImpl for AsdfDragArea {}
+impl WidgetImpl for AsdfDragArea {}
+impl DrawingAreaImpl for AsdfDragArea {}
+glib::wrapper! {
+    pub struct DragArea(ObjectSubclass<AsdfDragArea>)
+        @extends DrawingArea, gtk4::Widget,
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
+}
+impl DragArea {
+    pub fn new(width: i32, height: i32) -> Self {
+        Object::builder()
+            .property("width", width)
+            .property("height", height)
+            .build()
     }
 }
