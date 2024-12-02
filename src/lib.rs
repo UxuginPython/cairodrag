@@ -97,28 +97,12 @@ impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
     }
 }
 pub struct AsdfDragArea {
-    drawing_area: DrawingArea,
     draggables: Rc<RefCell<DraggableSetHolder>>,
 }
 impl AsdfDragArea {
     pub fn new(width: i32, height: i32) -> Self {
         let draggables = Rc::new(RefCell::new(DraggableSetHolder::new()));
-        let drawing_area = DrawingArea::builder()
-            .content_width(width)
-            .content_height(height)
-            .build();
-        drawing_area.set_draw_func(clone!(
-            #[strong]
-            draggables,
-            move |_drawing_area, context, _width, _height| {
-                for i in draggables.borrow().iter().rev() {
-                    i.draw(&context, 0.0, 0.0).unwrap();
-                }
-                todo!();
-            }
-        ));
         Self {
-            drawing_area: drawing_area,
             draggables: draggables,
         }
     }
@@ -141,7 +125,6 @@ impl AsdfDragArea {
 impl Default for AsdfDragArea {
     fn default() -> Self {
         Self {
-            drawing_area: DrawingArea::new(),
             draggables: Rc::new(RefCell::new(DraggableSetHolder::new())),
         }
     }
@@ -152,7 +135,19 @@ impl ObjectSubclass for AsdfDragArea {
     type Type = DragArea;
     type ParentType = DrawingArea;
 }
-impl ObjectImpl for AsdfDragArea {}
+impl ObjectImpl for AsdfDragArea {
+    fn constructed(&self) {
+        self.parent_constructed();
+        let my_draggables = self.draggables.clone();
+        self.obj()
+            .set_draw_func(move |_drawing_area, context, _width, _height| {
+                for i in my_draggables.borrow().iter().rev() {
+                    i.draw(&context, 0.0, 0.0).unwrap();
+                }
+                todo!();
+            });
+    }
+}
 impl WidgetImpl for AsdfDragArea {}
 impl DrawingAreaImpl for AsdfDragArea {}
 glib::wrapper! {
