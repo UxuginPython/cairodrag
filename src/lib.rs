@@ -45,22 +45,35 @@ impl DraggableSetHolder {
     fn iter(&self) -> DraggableSetHolderIterator<'_> {
         DraggableSetHolderIterator {
             holder: self, //This is a reference
-            index: 0,
+            index_start: 0,
+            index_back: self.draggables.len() - 1,
         }
     }
 }
 struct DraggableSetHolderIterator<'a> {
     holder: &'a DraggableSetHolder,
-    index: usize,
+    index_start: usize,
+    index_back: usize,
 }
 impl<'a> Iterator for DraggableSetHolderIterator<'a> {
     type Item = ReferenceBorrow<'a, dyn Draggable>;
     fn next(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
-        if self.index >= self.holder.draggables.len() {
+        if self.index_start >= self.holder.draggables.len() || self.index_start >= self.index_back {
             return None;
         }
-        let output = self.holder.draggables[self.index].borrow();
-        self.index += 1;
+        let output = self.holder.draggables[self.index_start].borrow();
+        self.index_start += 1;
+        Some(output)
+    }
+}
+impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
+    fn next_back(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
+        //usize type keeps it from going below zero
+        if self.index_back <= self.index_start {
+            return None;
+        }
+        let output = self.holder.draggables[self.index_back].borrow();
+        self.index_back -= 1;
         Some(output)
     }
 }
@@ -79,12 +92,9 @@ impl DragArea {
             #[strong]
             draggables,
             move |_drawing_area, context, _width, _height| {
-                /*for i in draggables.borrow().iter().rev() {
-                    i.borrow().draw(&context, 0.0, 0.0).unwrap();
-                }*/
-                /*draggables.borrow().for_each(|x| {
-                    x.draw(&context, 0.0, 0.0).unwrap();
-                });*/
+                for i in draggables.borrow().iter().rev() {
+                    i.draw(&context, 0.0, 0.0).unwrap();
+                }
                 todo!();
             }
         ));
