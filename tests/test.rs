@@ -11,6 +11,9 @@ impl Draggable for Thing {
         context.fill()?;
         Ok(())
     }
+    fn get_limits(&self) -> (f64, f64, f64, f64) {
+        (0.0, 100.0, 0.0, 100.0)
+    }
     fn contains(&self, x: f64, y: f64) -> bool {
         x >= 0.0 && x <= 100.0 && y >= 0.0 && y <= 100.0
     }

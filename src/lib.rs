@@ -4,6 +4,8 @@ use gtk4::{cairo, glib, subclass::prelude::*, DrawingArea};
 mod imp;
 pub trait Draggable {
     fn draw(&self, context: &Context, x: f64, y: f64) -> Result<(), Error>;
+    ///(-x, +x, -y, +y)
+    fn get_limits(&self) -> (f64, f64, f64, f64);
     ///RELATIVE
     fn contains(&self, x: f64, y: f64) -> bool;
 }

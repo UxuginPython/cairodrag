@@ -173,6 +173,16 @@ impl ObjectSubclass for DragArea {
     type Type = super::DragArea;
     type ParentType = DrawingArea;
 }
+//                                                  width or height, whichever we're calculating
+fn calculate_limits(neg_limit: f64, pos_limit: f64, area_size: i32, desired_coord: f64) -> f64 {
+    if desired_coord < neg_limit.abs() {
+        return neg_limit.abs();
+    }
+    if desired_coord > area_size as f64 - pos_limit {
+        return area_size as f64 - pos_limit;
+    }
+    desired_coord
+}
 impl ObjectImpl for DragArea {
     fn constructed(&self) {
         self.parent_constructed();
@@ -227,9 +237,23 @@ impl ObjectImpl for DragArea {
                 Some(x) => x,
                 None => return,
             };
+            let (neg_x_limit, pos_x_limit, neg_y_limit, pos_y_limit) =
+                my_draggables.borrow().draggables[my_real_drag_info.index]
+                    .borrow()
+                    .get_limits();
             my_draggables.borrow_mut().locations[my_real_drag_info.index] = (
-                my_real_drag_info.start_x + x + my_real_drag_info.relative_x,
-                my_real_drag_info.start_y + y + my_real_drag_info.relative_y,
+                calculate_limits(
+                    neg_x_limit,
+                    pos_x_limit,
+                    my_obj.property("width_request"),
+                    my_real_drag_info.start_x + x + my_real_drag_info.relative_x,
+                ),
+                calculate_limits(
+                    neg_y_limit,
+                    pos_y_limit,
+                    my_obj.property("height_request"),
+                    my_real_drag_info.start_y + y + my_real_drag_info.relative_y,
+                ),
             );
             my_obj.queue_draw();
         });
