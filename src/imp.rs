@@ -191,11 +191,9 @@ impl ObjectImpl for DragArea {
         let my_draggables = self.draggables.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
-                //for i in my_draggables.borrow().iter().rev() {
                 for i in my_draggables.borrow().iter() {
                     i.draw(&context).unwrap();
                 }
-                //todo!();
             });
         let drag = GestureDrag::new();
         let my_draggables = self.draggables.clone();
@@ -232,7 +230,7 @@ impl ObjectImpl for DragArea {
         });
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
-        let my_obj = self.obj().clone(); //IDK
+        let my_obj = self.obj().clone();
         drag.connect_drag_update(move |_gesture: &GestureDrag, x: f64, y: f64| {
             let binding = my_drag_info.borrow();
             let my_real_drag_info = match binding.as_ref() {
