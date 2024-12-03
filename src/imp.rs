@@ -1,6 +1,6 @@
 use crate::Draggable;
 use cairo::{Context, Error};
-use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea};
+use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea, GestureDrag};
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -116,15 +116,24 @@ impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
         Some(output)
     }
 }
+struct DragInfo {
+    start_x: f64,
+    start_y: f64,
+    index: usize,
+    relative_x: f64,
+    relative_y: f64,
+}
 
 pub struct DragArea {
     draggables: Rc<RefCell<DraggableSetHolder>>,
+    drag_info: Rc<RefCell<Option<DragInfo>>>,
 }
 impl DragArea {
     pub fn new() -> Self {
         let draggables = Rc::new(RefCell::new(DraggableSetHolder::new()));
         Self {
             draggables: draggables,
+            drag_info: Rc::new(RefCell::new(None)),
         }
     }
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
@@ -147,6 +156,7 @@ impl Default for DragArea {
     fn default() -> Self {
         Self {
             draggables: Rc::new(RefCell::new(DraggableSetHolder::new())),
+            drag_info: Rc::new(RefCell::new(None)),
         }
     }
 }
@@ -168,6 +178,44 @@ impl ObjectImpl for DragArea {
                 }
                 //todo!();
             });
+        let drag = GestureDrag::new();
+        let my_draggables = self.draggables.clone();
+        let my_drag_info = self.drag_info.clone();
+        drag.connect_drag_begin(move |_gesture: &GestureDrag, x: f64, y: f64| {
+            let mut new_drag_info = None;
+            for (i, draggable_and_coords) in my_draggables.borrow().iter().enumerate() {
+                if draggable_and_coords
+                    .draggable
+                    .contains(x - draggable_and_coords.x, y - draggable_and_coords.y)
+                {
+                    new_drag_info = Some(DragInfo {
+                        start_x: x,
+                        start_y: y,
+                        index: i,
+                        relative_x: draggable_and_coords.x - x,
+                        relative_y: draggable_and_coords.y - y,
+                    })
+                }
+            }
+            *my_drag_info.borrow_mut() = new_drag_info;
+        });
+        let my_draggables = self.draggables.clone();
+        let my_drag_info = self.drag_info.clone();
+        let my_obj = self.obj().clone(); //IDK
+        drag.connect_drag_update(move |_gesture: &GestureDrag, x: f64, y: f64| {
+            let binding = my_drag_info.borrow();
+            let my_real_drag_info = match binding.as_ref() {
+                Some(x) => x,
+                None => return,
+            };
+            my_draggables.borrow_mut().locations[my_real_drag_info.index] = (
+                my_real_drag_info.start_x + x + my_real_drag_info.relative_x,
+                my_real_drag_info.start_y + y + my_real_drag_info.relative_y,
+            );
+            my_obj.queue_draw();
+        });
+        //XXX: There's no connect_drag_end function
+        self.obj().add_controller(drag);
     }
 }
 impl WidgetImpl for DragArea {}
