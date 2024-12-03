@@ -14,14 +14,15 @@ pub trait Draggable {
     ///Draws the object on a Cairo Context.
     fn draw(&self, context: &Context, x: f64, y: f64) -> Result<(), Error>;
     ///Returns how far the object extends from the coordinates given in `draw` as a tuple of
-    ///`(-x, +x, -y, +y)`.
+    ///`(-x, +x, -y, +y)`. These should be positive in all directions, e.g., a centered circle with
+    ///a radius of 50 should return `(50.0, 50.0, 50.0, 50.0)`.
     fn get_limits(&self) -> (f64, f64, f64, f64);
     ///Given relative coordinates with the object's last draw at the origin, returns whether the
     ///clicked point should serve as a "handle" for dragging the object. The default implementation
     ///assumes the object is a solid rectangle and uses `get_limits` to decide this.
     fn contains(&self, x: f64, y: f64) -> bool {
         let (neg_x, pos_x, neg_y, pos_y) = self.get_limits();
-        x >= -(neg_x.abs()) && x <= pos_x && y >= -(neg_y.abs()) && y <= pos_y
+        x >= -neg_x && x <= pos_x && y >= -neg_y && y <= pos_y
     }
 }
 glib::wrapper! {

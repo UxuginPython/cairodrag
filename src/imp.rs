@@ -177,8 +177,8 @@ impl ObjectSubclass for DragArea {
 }
 //                                                  width or height, whichever we're calculating
 fn calculate_limits(neg_limit: f64, pos_limit: f64, area_size: i32, desired_coord: f64) -> f64 {
-    if desired_coord < neg_limit.abs() {
-        return neg_limit.abs();
+    if desired_coord < neg_limit {
+        return neg_limit;
     }
     if desired_coord > area_size as f64 - pos_limit {
         return area_size as f64 - pos_limit;

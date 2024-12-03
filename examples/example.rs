@@ -26,7 +26,7 @@ impl Draggable for Circle {
         Ok(())
     }
     fn get_limits(&self) -> (f64, f64, f64, f64) {
-        (-50.0, 50.0, -50.0, 50.0)
+        (50.0, 50.0, 50.0, 50.0)
     }
     fn contains(&self, x: f64, y: f64) -> bool {
         (x.powi(2) + y.powi(2)).sqrt() <= 50.0
