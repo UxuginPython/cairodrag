@@ -17,8 +17,8 @@ impl DragArea {
             .property("height_request", height)
             .build()
     }
-    pub fn push_box(&mut self, item: Box<impl Draggable + 'static>) {
+    pub fn push_box(&mut self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
         let selff = imp::DragArea::from_obj(self);
-        selff.push_box(item);
+        selff.push_box(item, x, y);
     }
 }

@@ -1,5 +1,6 @@
 use crate::Draggable;
-use gtk4::{glib, prelude::*, subclass::prelude::*, DrawingArea};
+use cairo::{Context, Error};
+use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea};
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -47,15 +48,18 @@ impl<T: ?Sized> Deref for ReferenceBorrow<'_, T> {
 }
 struct DraggableSetHolder {
     draggables: Vec<Reference<dyn Draggable>>,
+    locations: Vec<(f64, f64)>,
 }
 impl DraggableSetHolder {
     fn new() -> Self {
         Self {
             draggables: Vec::new(),
+            locations: Vec::new(),
         }
     }
-    fn push(&mut self, item: Reference<dyn Draggable>) {
+    fn push(&mut self, item: Reference<dyn Draggable>, x: f64, y: f64) {
         self.draggables.push(item);
+        self.locations.push((x, y));
     }
     fn iter(&self) -> DraggableSetHolderIterator<'_> {
         let len = self.draggables.len();
@@ -67,29 +71,47 @@ impl DraggableSetHolder {
         }
     }
 }
+struct DraggableAndCoordinates<'a> {
+    draggable: ReferenceBorrow<'a, dyn Draggable>,
+    x: f64,
+    y: f64,
+}
+impl<'a> DraggableAndCoordinates<'a> {
+    fn draw(&self, context: &Context) -> Result<(), Error> {
+        self.draggable.draw(context, self.x, self.y)
+    }
+}
 struct DraggableSetHolderIterator<'a> {
     holder: &'a DraggableSetHolder,
     index_start: usize,
     index_back: usize,
 }
 impl<'a> Iterator for DraggableSetHolderIterator<'a> {
-    type Item = ReferenceBorrow<'a, dyn Draggable>;
-    fn next(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
+    type Item = DraggableAndCoordinates<'a>;
+    fn next(&mut self) -> Option<DraggableAndCoordinates<'a>> {
         if self.index_start >= self.holder.draggables.len() || self.index_start > self.index_back {
             return None;
         }
-        let output = self.holder.draggables[self.index_start].borrow();
+        let output = DraggableAndCoordinates {
+            draggable: self.holder.draggables[self.index_start].borrow(),
+            x: self.holder.locations[self.index_start].0,
+            y: self.holder.locations[self.index_start].1,
+        };
         self.index_start += 1;
         Some(output)
     }
 }
 impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
-    fn next_back(&mut self) -> Option<ReferenceBorrow<'a, dyn Draggable>> {
+    fn next_back(&mut self) -> Option<DraggableAndCoordinates<'a>> {
         //usize type keeps it from going below zero
         if self.index_back < self.index_start {
             return None;
         }
-        let output = self.holder.draggables[self.index_back].borrow();
+        let output = DraggableAndCoordinates {
+            draggable: self.holder.draggables[self.index_back].borrow(),
+            x: self.holder.locations[self.index_back].0,
+            y: self.holder.locations[self.index_back].1,
+        };
         self.index_back -= 1;
         Some(output)
     }
@@ -105,20 +127,20 @@ impl DragArea {
             draggables: draggables,
         }
     }
-    pub fn push_box(&self, item: Box<impl Draggable + 'static>) {
+    pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
         self.draggables
             .borrow_mut()
-            .push((item as Box<dyn Draggable>).into());
+            .push((item as Box<dyn Draggable>).into(), x, y);
     }
-    pub fn push_rc(&self, item: Rc<impl Draggable + 'static>) {
+    pub fn push_rc(&self, item: Rc<impl Draggable + 'static>, x: f64, y: f64) {
         self.draggables
             .borrow_mut()
-            .push((item as Rc<dyn Draggable>).into());
+            .push((item as Rc<dyn Draggable>).into(), x, y);
     }
-    pub fn push_rc_ref_cell(&self, item: Rc<RefCell<impl Draggable + 'static>>) {
+    pub fn push_rc_ref_cell(&self, item: Rc<RefCell<impl Draggable + 'static>>, x: f64, y: f64) {
         self.draggables
             .borrow_mut()
-            .push((item as Rc<RefCell<dyn Draggable>>).into());
+            .push((item as Rc<RefCell<dyn Draggable>>).into(), x, y);
     }
 }
 impl Default for DragArea {
@@ -142,7 +164,7 @@ impl ObjectImpl for DragArea {
             .set_draw_func(move |_drawing_area, context, _width, _height| {
                 //for i in my_draggables.borrow().iter().rev() {
                 for i in my_draggables.borrow().iter() {
-                    i.draw(&context, 0.0, 0.0).unwrap();
+                    i.draw(&context).unwrap();
                 }
                 //todo!();
             });
