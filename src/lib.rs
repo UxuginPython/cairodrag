@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright 2024 UxuginPython
 use cairo::{Context, Error};
 use glib::Object;
 use gtk4::{cairo, glib, subclass::prelude::*, DrawingArea};

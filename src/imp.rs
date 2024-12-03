@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright 2024 UxuginPython
 use crate::Draggable;
 use cairo::{Context, Error};
 use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea, GestureDrag};

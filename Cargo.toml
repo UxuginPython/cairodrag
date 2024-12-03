@@ -1,7 +1,14 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright 2024 UxuginPython
 [package]
 name = "cairodrag"
 version = "0.1.0"
+license = "BSD-3-Clause"
 edition = "2021"
+authors = ["UxuginPython <uxugin at uxugin dot com>"]
+repository = "https://github.com/UxuginPython/cairodrag"
+description = "Unofficial drag-and-drop implementation for cairo-rs"
+categories = ["gui"]
 
 [dependencies]
 gtk4 = "0.9.1"
