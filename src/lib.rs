@@ -7,7 +7,10 @@ pub trait Draggable {
     ///(-x, +x, -y, +y)
     fn get_limits(&self) -> (f64, f64, f64, f64);
     ///RELATIVE
-    fn contains(&self, x: f64, y: f64) -> bool;
+    fn contains(&self, x: f64, y: f64) -> bool {
+        let (neg_x, pos_x, neg_y, pos_y) = self.get_limits();
+        x >= -(neg_x.abs()) && x <= pos_x && y >= -(neg_y.abs()) && y <= pos_y
+    }
 }
 glib::wrapper! {
     pub struct DragArea(ObjectSubclass<imp::DragArea>)
