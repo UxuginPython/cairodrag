@@ -70,6 +70,13 @@ impl DraggableSetHolder {
             index_back: index_back,
         }
     }
+    fn move_to_end(&mut self, index: usize) -> usize {
+        let element = self.draggables.remove(index);
+        self.draggables.push(element);
+        let element = self.locations.remove(index);
+        self.locations.push(element);
+        self.draggables.len() - 1
+    }
 }
 struct DraggableAndCoordinates<'a> {
     draggable: ReferenceBorrow<'a, dyn Draggable>,
@@ -181,6 +188,7 @@ impl ObjectImpl for DragArea {
         let drag = GestureDrag::new();
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
+        let my_obj = self.obj().clone();
         drag.connect_drag_begin(move |_gesture: &GestureDrag, x: f64, y: f64| {
             let mut new_drag_info = None;
             for (i, draggable_and_coords) in my_draggables.borrow().iter().enumerate() {
@@ -197,7 +205,18 @@ impl ObjectImpl for DragArea {
                     })
                 }
             }
+            new_drag_info = match new_drag_info {
+                Some(drag_info) => Some(DragInfo {
+                    start_x: drag_info.start_x,
+                    start_y: drag_info.start_y,
+                    index: my_draggables.borrow_mut().move_to_end(drag_info.index),
+                    relative_x: drag_info.relative_x,
+                    relative_y: drag_info.relative_y,
+                }),
+                None => None,
+            };
             *my_drag_info.borrow_mut() = new_drag_info;
+            my_obj.queue_draw();
         });
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
