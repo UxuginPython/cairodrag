@@ -11,4 +11,4 @@ description = "Unofficial drag-and-drop implementation for cairo-rs"
 categories = ["gui"]
 
 [dependencies]
-gtk4 = "0.9.1"
+gtk4 = "0.9.4"

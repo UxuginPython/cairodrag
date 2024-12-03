@@ -19,7 +19,8 @@ pub trait Draggable {
     fn get_limits(&self) -> (f64, f64, f64, f64);
     ///Given relative coordinates with the object's last draw at the origin, returns whether the
     ///clicked point should serve as a "handle" for dragging the object. The default implementation
-    ///assumes the object is a solid rectangle and uses `get_limits` to decide this.
+    ///assumes the object is a solid rectangle and uses `get_limits` to calculate if the point is
+    ///contained.
     fn contains(&self, x: f64, y: f64) -> bool {
         let (neg_x, pos_x, neg_y, pos_y) = self.get_limits();
         x >= -neg_x && x <= pos_x && y >= -neg_y && y <= pos_y
