@@ -2,7 +2,7 @@ use cairo::{Context, Error};
 use cairodrag::*;
 use gtk4::prelude::*;
 use gtk4::{cairo, glib, Application, ApplicationWindow};
-const APP_ID: &str = "com.uxugin.cairodrag.test";
+const APP_ID: &str = "com.uxugin.cairodrag.example";
 struct Square(f64, f64, f64);
 impl Draggable for Square {
     fn draw(&self, context: &Context, x: f64, y: f64) -> Result<(), Error> {
