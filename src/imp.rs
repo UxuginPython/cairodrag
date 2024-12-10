@@ -14,7 +14,7 @@ enum Reference<T: ?Sized> {
 impl<T: ?Sized> Reference<T> {
     fn borrow(&self) -> ReferenceBorrow<'_, T> {
         match self {
-            Self::Box(boxx) => ReferenceBorrow::NormalReference(boxx),
+            Self::Box(box_) => ReferenceBorrow::NormalReference(box_),
             Self::Rc(rc) => ReferenceBorrow::NormalReference(rc),
             Self::RcRefCell(rc_ref_cell) => ReferenceBorrow::RefCellBorrow(rc_ref_cell.borrow()),
         }
@@ -257,7 +257,7 @@ impl ObjectImpl for DragArea {
             );
             my_obj.queue_draw();
         });
-        //XXX: There's no connect_drag_end function
+        //XXX: There's no drag end function
         self.obj().add_controller(drag);
     }
 }
