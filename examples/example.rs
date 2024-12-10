@@ -41,7 +41,7 @@ fn build_ui(app: &Application) {
     let a = Box::new(Square(1.0, 0.0, 0.0));
     let b = Box::new(Square(0.0, 0.0, 1.0));
     let c = Box::new(Circle(0.0, 1.0, 0.0));
-    let mut drag_area = DragArea::new(500, 500);
+    let drag_area = DragArea::new(500, 500);
     drag_area.push_box(a, 100.0, 100.0);
     drag_area.push_box(b, 300.0, 100.0);
     drag_area.push_box(c, 250.0, 350.0);

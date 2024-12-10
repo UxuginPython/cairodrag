@@ -42,24 +42,19 @@ impl DragArea {
             .build()
     }
     ///Adds a draggable object contained in a `Box` to the `DragArea`.
-    pub fn push_box(&mut self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
+    pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.push_box(item, x, y);
         self.queue_draw();
     }
     ///Adds a draggable object contained in an `Rc` to the `DragArea`.
-    pub fn push_rc(&mut self, item: Rc<impl Draggable + 'static>, x: f64, y: f64) {
+    pub fn push_rc(&self, item: Rc<impl Draggable + 'static>, x: f64, y: f64) {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.push_rc(item, x, y);
         self.queue_draw();
     }
     ///Adds a draggable object contained in an `Rc<RefCell>` to the `DragArea`.
-    pub fn push_rc_ref_cell(
-        &mut self,
-        item: Rc<RefCell<impl Draggable + 'static>>,
-        x: f64,
-        y: f64,
-    ) {
+    pub fn push_rc_ref_cell(&self, item: Rc<RefCell<impl Draggable + 'static>>, x: f64, y: f64) {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.push_rc_ref_cell(item, x, y);
         self.queue_draw();
