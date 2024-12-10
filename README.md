@@ -6,3 +6,9 @@ Read the [documentation](https://docs.rs/cairodrag) and the example (found in th
 
 ## License: BSD 3-Clause
 This basically means that you can do whatever you want as long as you give me attribution and you don't remove the license notices or use my name to endorse stuff I don't. Read the actual license for details though.
+
+## Changes
+### 0.1.0
+- Initial release.
+### 0.1.1
+- Change `DragArea::push_(box|rc|rc_ref_cell)` to `&self` instead of `&mut self` since they only rely on interior mutability internally.
