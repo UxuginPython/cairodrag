@@ -41,19 +41,6 @@ impl DragArea {
             .property("height_request", height)
             .build()
     }
-    pub fn with_boundedness(
-        width: i32,
-        height: i32,
-        boundedness: (bool, bool, bool, bool),
-    ) -> Self {
-        let output = Self::new(width, height);
-        let output_imp = imp::DragArea::from_obj(&output);
-        output_imp.set_boundedness(boundedness);
-        output
-    }
-    pub fn new_unbounded(width: i32, height: i32) -> Self {
-        Self::with_boundedness(width, height, (false, false, false, false))
-    }
     ///Adds a draggable object contained in a `Box` to the `DragArea`.
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
         let self_imp = imp::DragArea::from_obj(self);
