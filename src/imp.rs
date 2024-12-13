@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright 2024 UxuginPython
 use crate::Draggable;
-use cairo::{Context, Error};
-use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea, GestureDrag};
-use std::cell::RefCell;
+use gtk4::{glib, prelude::*, subclass::prelude::*, DrawingArea, GestureDrag};
+use std::cell::{Cell, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
 enum Reference<T: ?Sized> {
@@ -85,11 +84,6 @@ struct DraggableAndCoordinates<'a> {
     x: f64,
     y: f64,
 }
-impl<'a> DraggableAndCoordinates<'a> {
-    fn draw(&self, context: &Context) -> Result<(), Error> {
-        self.draggable.draw(context, self.x, self.y)
-    }
-}
 struct DraggableSetHolderIterator<'a> {
     holder: &'a DraggableSetHolder,
     index_start: usize,
@@ -136,6 +130,9 @@ struct DragInfo {
 pub struct DragArea {
     draggables: Rc<RefCell<DraggableSetHolder>>,
     drag_info: Rc<RefCell<Option<DragInfo>>>,
+    scrollable: Rc<Cell<bool>>,
+    translate: Rc<Cell<(f64, f64)>>,
+    drag_translate: Rc<Cell<(f64, f64)>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -143,6 +140,9 @@ impl DragArea {
         Self {
             draggables: draggables,
             drag_info: Rc::new(RefCell::new(None)),
+            scrollable: Rc::new(Cell::new(false)),
+            translate: Rc::new(Cell::new((0.0, 0.0))),
+            drag_translate: Rc::new(Cell::new((0.0, 0.0))),
         }
     }
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
@@ -160,12 +160,23 @@ impl DragArea {
             .borrow_mut()
             .push((item as Rc<RefCell<dyn Draggable>>).into(), x, y);
     }
+    pub fn get_scroll_location(&self) -> (f64, f64) {
+        let (trans_x, trans_y) = self.translate.get();
+        let (drag_trans_x, drag_trans_y) = self.drag_translate.get();
+        (trans_x + drag_trans_x, trans_y + drag_trans_y)
+    }
+    pub(crate) fn set_scrollable(&self, scrollable: bool) {
+        self.scrollable.set(scrollable);
+    }
 }
 impl Default for DragArea {
     fn default() -> Self {
         Self {
             draggables: Rc::new(RefCell::new(DraggableSetHolder::new())),
             drag_info: Rc::new(RefCell::new(None)),
+            scrollable: Rc::new(Cell::new(false)),
+            translate: Rc::new(Cell::new((0.0, 0.0))),
+            drag_translate: Rc::new(Cell::new((0.0, 0.0))),
         }
     }
 }
@@ -176,12 +187,20 @@ impl ObjectSubclass for DragArea {
     type ParentType = DrawingArea;
 }
 //                                                  width or height, whichever we're calculating
-fn calculate_limits(neg_limit: f64, pos_limit: f64, area_size: i32, desired_coord: f64) -> f64 {
-    if desired_coord < neg_limit {
-        return neg_limit;
-    }
-    if desired_coord > area_size as f64 - pos_limit {
-        return area_size as f64 - pos_limit;
+fn calculate_limits(
+    neg_limit: f64,
+    pos_limit: f64,
+    area_size: i32,
+    scrollable: bool,
+    desired_coord: f64,
+) -> f64 {
+    if !scrollable {
+        if desired_coord < neg_limit {
+            return neg_limit;
+        }
+        if desired_coord > area_size as f64 - pos_limit {
+            return area_size as f64 - pos_limit;
+        }
     }
     desired_coord
 }
@@ -189,23 +208,34 @@ impl ObjectImpl for DragArea {
     fn constructed(&self) {
         self.parent_constructed();
         let my_draggables = self.draggables.clone();
+        let my_translate = self.translate.clone();
+        let my_drag_translate = self.drag_translate.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
                 for i in my_draggables.borrow().iter() {
-                    i.draw(&context).unwrap();
+                    let (trans_x, trans_y) = my_translate.get();
+                    let (drag_trans_x, drag_trans_y) = my_drag_translate.get();
+                    let x = i.x + trans_x + drag_trans_x;
+                    let y = i.y + trans_y + drag_trans_y;
+                    i.draggable.draw(&context, x, y).unwrap();
                 }
             });
         let drag = GestureDrag::new();
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
         let my_obj = self.obj().clone();
+        let my_translate = self.translate.clone();
         drag.connect_drag_begin(move |_gesture: &GestureDrag, x: f64, y: f64| {
+            let (trans_x, trans_y) = my_translate.get(); //drag_translate is always (0.0, 0.0) when
+                                                         //we're not actively dragging, which we're
+                                                         //not when the drag begin function is
+                                                         //called.
             let mut new_drag_info = None;
             for (i, draggable_and_coords) in my_draggables.borrow().iter().enumerate() {
-                if draggable_and_coords
-                    .draggable
-                    .contains(x - draggable_and_coords.x, y - draggable_and_coords.y)
-                {
+                if draggable_and_coords.draggable.contains(
+                    x - trans_x - draggable_and_coords.x,
+                    y - trans_y - draggable_and_coords.y,
+                ) {
                     new_drag_info = Some(DragInfo {
                         start_x: x,
                         start_y: y,
@@ -231,11 +261,20 @@ impl ObjectImpl for DragArea {
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
         let my_obj = self.obj().clone();
+        let my_scrollable = self.scrollable.clone();
+        let my_drag_translate = self.drag_translate.clone();
         drag.connect_drag_update(move |_gesture: &GestureDrag, x: f64, y: f64| {
+            let scrollable = my_scrollable.get();
             let binding = my_drag_info.borrow();
             let my_real_drag_info = match binding.as_ref() {
                 Some(x) => x,
-                None => return,
+                None => {
+                    if scrollable {
+                        my_drag_translate.set((x, y));
+                        my_obj.queue_draw();
+                    }
+                    return;
+                }
             };
             let (neg_x_limit, pos_x_limit, neg_y_limit, pos_y_limit) =
                 my_draggables.borrow().draggables[my_real_drag_info.index]
@@ -246,18 +285,32 @@ impl ObjectImpl for DragArea {
                     neg_x_limit,
                     pos_x_limit,
                     my_obj.property("width_request"),
+                    scrollable,
                     my_real_drag_info.start_x + x + my_real_drag_info.relative_x,
                 ),
                 calculate_limits(
                     neg_y_limit,
                     pos_y_limit,
                     my_obj.property("height_request"),
+                    scrollable,
                     my_real_drag_info.start_y + y + my_real_drag_info.relative_y,
                 ),
             );
             my_obj.queue_draw();
         });
-        //XXX: There's no drag end function
+        let my_obj = self.obj().clone();
+        let my_translate = self.translate.clone();
+        let my_drag_translate = self.drag_translate.clone();
+        //XXX: This does not update the position of anything
+        drag.connect_drag_end(move |_gesture: &GestureDrag, _x: f64, _y: f64| {
+            let (old_trans_x, old_trans_y) = my_translate.get();
+            let (drag_trans_x, drag_trans_y) = my_drag_translate.get();
+            //let (drag_trans_x, drag_trans_y) = (x, y);
+            let new_trans = (old_trans_x + drag_trans_x, old_trans_y + drag_trans_y);
+            my_translate.set(new_trans);
+            my_drag_translate.set((0.0, 0.0));
+            my_obj.queue_draw();
+        });
         self.obj().add_controller(drag);
     }
 }

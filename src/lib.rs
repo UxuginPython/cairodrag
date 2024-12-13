@@ -28,18 +28,25 @@ pub trait Draggable {
 }
 glib::wrapper! {
     ///A subclass of [`gtk4::DrawingArea`] allowing for drag-and-drop of objects implementing the
-    ///[`Draggable`] trait.
+    ///[`Draggable`] trait. Can optionally be scrolled by dragging in an area without an object.
     pub struct DragArea(ObjectSubclass<imp::DragArea>)
         @extends DrawingArea, gtk4::Widget,
         @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget;
 }
 impl DragArea {
-    ///Constructor for `DragArea`.
+    ///Constructs a non-scrollable `DragArea`.
     pub fn new(width: i32, height: i32) -> Self {
         Object::builder()
             .property("width_request", width)
             .property("height_request", height)
             .build()
+    }
+    ///Constructs a scrollable `DragArea`.
+    pub fn new_scrollable(width: i32, height: i32) -> Self {
+        let output = Self::new(width, height);
+        let output_imp = imp::DragArea::from_obj(&output);
+        output_imp.set_scrollable(true);
+        output
     }
     ///Adds a draggable object contained in a `Box` to the `DragArea`.
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
@@ -58,5 +65,11 @@ impl DragArea {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.push_rc_ref_cell(item, x, y);
         self.queue_draw();
+    }
+    ///Gets the translation being applied from scrolling, or the "location" of the viewable
+    ///"window." Always returns `(0.0, 0.0)` if scrolling is disabled.
+    pub fn get_scroll_location(&self) -> (f64, f64) {
+        let self_imp = imp::DragArea::from_obj(self);
+        self_imp.get_scroll_location()
     }
 }
