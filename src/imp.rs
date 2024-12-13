@@ -3,7 +3,7 @@
 use crate::Draggable;
 use cairo::{Context, Error};
 use gtk4::{cairo, glib, prelude::*, subclass::prelude::*, DrawingArea, GestureDrag};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
 enum Reference<T: ?Sized> {
@@ -136,6 +136,7 @@ struct DragInfo {
 pub struct DragArea {
     draggables: Rc<RefCell<DraggableSetHolder>>,
     drag_info: Rc<RefCell<Option<DragInfo>>>,
+    boundedness: Rc<Cell<(bool, bool, bool, bool)>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -143,6 +144,7 @@ impl DragArea {
         Self {
             draggables: draggables,
             drag_info: Rc::new(RefCell::new(None)),
+            boundedness: Rc::new(Cell::new((true, true, true, true))),
         }
     }
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
@@ -160,12 +162,16 @@ impl DragArea {
             .borrow_mut()
             .push((item as Rc<RefCell<dyn Draggable>>).into(), x, y);
     }
+    pub(crate) fn set_boundedness(&self, boundedness: (bool, bool, bool, bool)) {
+        self.boundedness.set(boundedness);
+    }
 }
 impl Default for DragArea {
     fn default() -> Self {
         Self {
             draggables: Rc::new(RefCell::new(DraggableSetHolder::new())),
             drag_info: Rc::new(RefCell::new(None)),
+            boundedness: Rc::new(Cell::new((true, true, true, true))),
         }
     }
 }
@@ -175,12 +181,18 @@ impl ObjectSubclass for DragArea {
     type Type = super::DragArea;
     type ParentType = DrawingArea;
 }
-//                                                  width or height, whichever we're calculating
-fn calculate_limits(neg_limit: f64, pos_limit: f64, area_size: i32, desired_coord: f64) -> f64 {
-    if desired_coord < neg_limit {
+fn calculate_limits(
+    neg_limit: f64,
+    bounded_neg: bool,
+    pos_limit: f64,
+    bounded_pos: bool,
+    area_size: i32, //width or height, whichever we're calculating
+    desired_coord: f64,
+) -> f64 {
+    if bounded_neg && desired_coord < neg_limit {
         return neg_limit;
     }
-    if desired_coord > area_size as f64 - pos_limit {
+    if bounded_pos && desired_coord > area_size as f64 - pos_limit {
         return area_size as f64 - pos_limit;
     }
     desired_coord
@@ -231,7 +243,9 @@ impl ObjectImpl for DragArea {
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
         let my_obj = self.obj().clone();
+        let my_boundedness = self.boundedness.clone();
         drag.connect_drag_update(move |_gesture: &GestureDrag, x: f64, y: f64| {
+            let (bounded_top, bounded_bottom, bounded_left, bounded_right) = my_boundedness.get();
             let binding = my_drag_info.borrow();
             let my_real_drag_info = match binding.as_ref() {
                 Some(x) => x,
@@ -244,13 +258,17 @@ impl ObjectImpl for DragArea {
             my_draggables.borrow_mut().locations[my_real_drag_info.index] = (
                 calculate_limits(
                     neg_x_limit,
+                    bounded_left,
                     pos_x_limit,
+                    bounded_right,
                     my_obj.property("width_request"),
                     my_real_drag_info.start_x + x + my_real_drag_info.relative_x,
                 ),
                 calculate_limits(
                     neg_y_limit,
+                    bounded_top,
                     pos_y_limit,
+                    bounded_bottom,
                     my_obj.property("height_request"),
                     my_real_drag_info.start_y + y + my_real_drag_info.relative_y,
                 ),
