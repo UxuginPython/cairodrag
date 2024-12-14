@@ -146,6 +146,7 @@ pub struct DragArea {
     translate: Rc<Cell<(f64, f64)>>,
     drag_translate: Rc<Cell<(f64, f64)>>,
     pre_draw_func: Rc<RefCell<Option<Box<dyn Fn() -> ()>>>>,
+    post_draw_func: Rc<RefCell<Option<Box<dyn Fn() -> ()>>>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -158,6 +159,7 @@ impl DragArea {
             translate: Rc::new(Cell::new((0.0, 0.0))),
             drag_translate: Rc::new(Cell::new((0.0, 0.0))),
             pre_draw_func: Rc::new(RefCell::new(None)),
+            post_draw_func: Rc::new(RefCell::new(None)),
         }
     }
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
@@ -186,6 +188,9 @@ impl DragArea {
     pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl Fn() -> () + 'static>) {
         *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn Fn() -> ()>);
     }
+    pub fn set_post_draw_func(&self, post_draw_func: Box<impl Fn() -> () + 'static>) {
+        *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn Fn() -> ()>);
+    }
 }
 impl Default for DragArea {
     fn default() -> Self {
@@ -197,6 +202,7 @@ impl Default for DragArea {
             translate: Rc::new(Cell::new((0.0, 0.0))),
             drag_translate: Rc::new(Cell::new((0.0, 0.0))),
             pre_draw_func: Rc::new(RefCell::new(None)),
+            post_draw_func: Rc::new(RefCell::new(None)),
         }
     }
 }
@@ -231,6 +237,7 @@ impl ObjectImpl for DragArea {
         let my_translate = self.translate.clone();
         let my_drag_translate = self.drag_translate.clone();
         let my_pre_draw_func = self.pre_draw_func.clone();
+        let my_post_draw_func = self.post_draw_func.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
                 match &*my_pre_draw_func.borrow() {
@@ -244,6 +251,10 @@ impl ObjectImpl for DragArea {
                     let x = i.x + trans_x + drag_trans_x;
                     let y = i.y + trans_y + drag_trans_y;
                     i.draggable.draw(&context, x, y).unwrap();
+                }
+                match &*my_post_draw_func.borrow() {
+                    Some(func) => (*func)(),
+                    None => (),
                 }
             });
         let drag = GestureDrag::new();

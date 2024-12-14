@@ -99,4 +99,8 @@ impl DragArea {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.set_pre_draw_func(Box::new(pre_draw_func));
     }
+    pub fn set_post_draw_func(&self, post_draw_func: impl Fn() -> () + 'static) {
+        let self_imp = imp::DragArea::from_obj(self);
+        self_imp.set_post_draw_func(Box::new(post_draw_func));
+    }
 }
