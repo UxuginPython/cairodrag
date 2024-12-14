@@ -131,6 +131,7 @@ pub struct DragArea {
     draggables: Rc<RefCell<DraggableSetHolder>>,
     drag_info: Rc<RefCell<Option<DragInfo>>>,
     scrollable: Rc<Cell<bool>>,
+    scrolling: Rc<Cell<bool>>,
     translate: Rc<Cell<(f64, f64)>>,
     drag_translate: Rc<Cell<(f64, f64)>>,
 }
@@ -141,6 +142,7 @@ impl DragArea {
             draggables: draggables,
             drag_info: Rc::new(RefCell::new(None)),
             scrollable: Rc::new(Cell::new(false)),
+            scrolling: Rc::new(Cell::new(false)),
             translate: Rc::new(Cell::new((0.0, 0.0))),
             drag_translate: Rc::new(Cell::new((0.0, 0.0))),
         }
@@ -175,6 +177,7 @@ impl Default for DragArea {
             draggables: Rc::new(RefCell::new(DraggableSetHolder::new())),
             drag_info: Rc::new(RefCell::new(None)),
             scrollable: Rc::new(Cell::new(false)),
+            scrolling: Rc::new(Cell::new(false)),
             translate: Rc::new(Cell::new((0.0, 0.0))),
             drag_translate: Rc::new(Cell::new((0.0, 0.0))),
         }
@@ -224,6 +227,7 @@ impl ObjectImpl for DragArea {
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
         let my_obj = self.obj().clone();
+        let my_scrolling = self.scrolling.clone();
         let my_translate = self.translate.clone();
         drag.connect_drag_begin(move |_gesture: &GestureDrag, x: f64, y: f64| {
             let (trans_x, trans_y) = my_translate.get(); //drag_translate is always (0.0, 0.0) when
@@ -231,6 +235,7 @@ impl ObjectImpl for DragArea {
                                                          //not when the drag begin function is
                                                          //called.
             let mut new_drag_info = None;
+            let mut scrolling = true;
             for (i, draggable_and_coords) in my_draggables.borrow().iter().enumerate() {
                 if draggable_and_coords.draggable.contains(
                     x - trans_x - draggable_and_coords.x,
@@ -244,6 +249,12 @@ impl ObjectImpl for DragArea {
                         relative_y: draggable_and_coords.y - y,
                     })
                 }
+                if !draggable_and_coords.draggable.can_scroll(
+                    x - trans_x - draggable_and_coords.x,
+                    y - trans_y - draggable_and_coords.y,
+                ) {
+                    scrolling = false;
+                }
             }
             new_drag_info = match new_drag_info {
                 Some(drag_info) => Some(DragInfo {
@@ -256,20 +267,23 @@ impl ObjectImpl for DragArea {
                 None => None,
             };
             *my_drag_info.borrow_mut() = new_drag_info;
+            my_scrolling.set(scrolling);
             my_obj.queue_draw();
         });
         let my_draggables = self.draggables.clone();
         let my_drag_info = self.drag_info.clone();
         let my_obj = self.obj().clone();
         let my_scrollable = self.scrollable.clone();
+        let my_scrolling = self.scrolling.clone();
         let my_drag_translate = self.drag_translate.clone();
         drag.connect_drag_update(move |_gesture: &GestureDrag, x: f64, y: f64| {
             let scrollable = my_scrollable.get();
+            let scrolling = my_scrolling.get();
             let binding = my_drag_info.borrow();
             let my_real_drag_info = match binding.as_ref() {
                 Some(x) => x,
                 None => {
-                    if scrollable {
+                    if scrollable && scrolling {
                         my_drag_translate.set((x, y));
                         my_obj.queue_draw();
                     }

@@ -25,6 +25,12 @@ pub trait Draggable {
         let (neg_x, pos_x, neg_y, pos_y) = self.get_limits();
         x >= -neg_x && x <= pos_x && y >= -neg_y && y <= pos_y
     }
+    ///Given relative coordinates with the object's last draw at the origin, returns whether the
+    ///clicked point should serve as a "handle" for scrolling the [`DragArea`] (assuming it is
+    ///scrollable). The default implementation is the inverse of [`contains`](Draggable::contains).
+    fn can_scroll(&self, x: f64, y: f64) -> bool {
+        !self.contains(x, y)
+    }
 }
 glib::wrapper! {
     ///A subclass of [`gtk4::DrawingArea`] allowing for drag-and-drop of objects implementing the
