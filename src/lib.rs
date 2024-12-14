@@ -95,4 +95,8 @@ impl DragArea {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.get_scroll_location()
     }
+    pub fn set_pre_draw_func(&self, pre_draw_fn: impl Fn() -> () + 'static) {
+        let self_imp = imp::DragArea::from_obj(self);
+        self_imp.set_pre_draw_func(Box::new(pre_draw_fn));
+    }
 }

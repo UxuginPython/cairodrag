@@ -145,6 +145,7 @@ pub struct DragArea {
     scrolling: Rc<Cell<bool>>,
     translate: Rc<Cell<(f64, f64)>>,
     drag_translate: Rc<Cell<(f64, f64)>>,
+    pre_draw_fn: Rc<RefCell<Option<Box<dyn Fn() -> ()>>>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -156,6 +157,7 @@ impl DragArea {
             scrolling: Rc::new(Cell::new(false)),
             translate: Rc::new(Cell::new((0.0, 0.0))),
             drag_translate: Rc::new(Cell::new((0.0, 0.0))),
+            pre_draw_fn: Rc::new(RefCell::new(None)),
         }
     }
     pub fn push_box(&self, item: Box<impl Draggable + 'static>, x: f64, y: f64) {
@@ -178,8 +180,11 @@ impl DragArea {
         let (drag_trans_x, drag_trans_y) = self.drag_translate.get();
         (trans_x + drag_trans_x, trans_y + drag_trans_y)
     }
-    pub(crate) fn set_scrollable(&self, scrollable: bool) {
+    pub fn set_scrollable(&self, scrollable: bool) {
         self.scrollable.set(scrollable);
+    }
+    pub fn set_pre_draw_func(&self, pre_draw_fn: Box<impl Fn() -> () + 'static>) {
+        *self.pre_draw_fn.borrow_mut() = Some(pre_draw_fn as Box<dyn Fn() -> ()>);
     }
 }
 impl Default for DragArea {
@@ -191,6 +196,7 @@ impl Default for DragArea {
             scrolling: Rc::new(Cell::new(false)),
             translate: Rc::new(Cell::new((0.0, 0.0))),
             drag_translate: Rc::new(Cell::new((0.0, 0.0))),
+            pre_draw_fn: Rc::new(RefCell::new(None)),
         }
     }
 }
@@ -224,8 +230,13 @@ impl ObjectImpl for DragArea {
         let my_draggables = self.draggables.clone();
         let my_translate = self.translate.clone();
         let my_drag_translate = self.drag_translate.clone();
+        let my_pre_draw_func = self.pre_draw_fn.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
+                match &*my_pre_draw_func.borrow() {
+                    Some(func) => (*func)(),
+                    None => (),
+                }
                 my_draggables.borrow_mut().retain();
                 for i in my_draggables.borrow().iter() {
                     let (trans_x, trans_y) = my_translate.get();
