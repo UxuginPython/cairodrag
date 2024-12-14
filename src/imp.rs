@@ -47,23 +47,38 @@ impl<T: ?Sized> Deref for ReferenceBorrow<'_, T> {
         }
     }
 }
+struct DraggableAndCoordinates {
+    draggable: Reference<dyn Draggable>,
+    x: f64,
+    y: f64,
+}
+impl DraggableAndCoordinates {
+    fn borrow(&self) -> DraggableBorrowAndCoordinates {
+        DraggableBorrowAndCoordinates {
+            draggable: self.draggable.borrow(),
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
 struct DraggableSetHolder {
-    draggables: Vec<Reference<dyn Draggable>>,
-    locations: Vec<(f64, f64)>,
+    draggables_and_locs: Vec<DraggableAndCoordinates>,
 }
 impl DraggableSetHolder {
     fn new() -> Self {
         Self {
-            draggables: Vec::new(),
-            locations: Vec::new(),
+            draggables_and_locs: Vec::new(),
         }
     }
     fn push(&mut self, item: Reference<dyn Draggable>, x: f64, y: f64) {
-        self.draggables.push(item);
-        self.locations.push((x, y));
+        self.draggables_and_locs.push(DraggableAndCoordinates {
+            draggable: item,
+            x: x,
+            y: y,
+        })
     }
     fn iter(&self) -> DraggableSetHolderIterator<'_> {
-        let len = self.draggables.len();
+        let len = self.draggables_and_locs.len();
         let index_back = if len >= 1 { len - 1 } else { 0 };
         DraggableSetHolderIterator {
             holder: self, //This is a reference
@@ -72,14 +87,12 @@ impl DraggableSetHolder {
         }
     }
     fn move_to_end(&mut self, index: usize) -> usize {
-        let element = self.draggables.remove(index);
-        self.draggables.push(element);
-        let element = self.locations.remove(index);
-        self.locations.push(element);
-        self.draggables.len() - 1
+        let element = self.draggables_and_locs.remove(index);
+        self.draggables_and_locs.push(element);
+        self.draggables_and_locs.len() - 1
     }
 }
-struct DraggableAndCoordinates<'a> {
+struct DraggableBorrowAndCoordinates<'a> {
     draggable: ReferenceBorrow<'a, dyn Draggable>,
     x: f64,
     y: f64,
@@ -90,31 +103,25 @@ struct DraggableSetHolderIterator<'a> {
     index_back: usize,
 }
 impl<'a> Iterator for DraggableSetHolderIterator<'a> {
-    type Item = DraggableAndCoordinates<'a>;
-    fn next(&mut self) -> Option<DraggableAndCoordinates<'a>> {
-        if self.index_start >= self.holder.draggables.len() || self.index_start > self.index_back {
+    type Item = DraggableBorrowAndCoordinates<'a>;
+    fn next(&mut self) -> Option<DraggableBorrowAndCoordinates<'a>> {
+        if self.index_start >= self.holder.draggables_and_locs.len()
+            || self.index_start > self.index_back
+        {
             return None;
         }
-        let output = DraggableAndCoordinates {
-            draggable: self.holder.draggables[self.index_start].borrow(),
-            x: self.holder.locations[self.index_start].0,
-            y: self.holder.locations[self.index_start].1,
-        };
+        let output = self.holder.draggables_and_locs[self.index_start].borrow();
         self.index_start += 1;
         Some(output)
     }
 }
 impl<'a> DoubleEndedIterator for DraggableSetHolderIterator<'a> {
-    fn next_back(&mut self) -> Option<DraggableAndCoordinates<'a>> {
+    fn next_back(&mut self) -> Option<DraggableBorrowAndCoordinates<'a>> {
         //usize type keeps it from going below zero
         if self.index_back < self.index_start {
             return None;
         }
-        let output = DraggableAndCoordinates {
-            draggable: self.holder.draggables[self.index_back].borrow(),
-            x: self.holder.locations[self.index_back].0,
-            y: self.holder.locations[self.index_back].1,
-        };
+        let output = self.holder.draggables_and_locs[self.index_back].borrow();
         self.index_back -= 1;
         Some(output)
     }
@@ -291,25 +298,26 @@ impl ObjectImpl for DragArea {
                 }
             };
             let (neg_x_limit, pos_x_limit, neg_y_limit, pos_y_limit) =
-                my_draggables.borrow().draggables[my_real_drag_info.index]
+                my_draggables.borrow().draggables_and_locs[my_real_drag_info.index]
+                    .draggable
                     .borrow()
                     .get_limits();
-            my_draggables.borrow_mut().locations[my_real_drag_info.index] = (
+            my_draggables.borrow_mut().draggables_and_locs[my_real_drag_info.index].x =
                 calculate_limits(
                     neg_x_limit,
                     pos_x_limit,
                     my_obj.property("width_request"),
                     scrollable,
                     my_real_drag_info.start_x + x + my_real_drag_info.relative_x,
-                ),
+                );
+            my_draggables.borrow_mut().draggables_and_locs[my_real_drag_info.index].y =
                 calculate_limits(
                     neg_y_limit,
                     pos_y_limit,
                     my_obj.property("height_request"),
                     scrollable,
                     my_real_drag_info.start_y + y + my_real_drag_info.relative_y,
-                ),
-            );
+                );
             my_obj.queue_draw();
         });
         let my_obj = self.obj().clone();
