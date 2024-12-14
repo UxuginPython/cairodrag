@@ -91,6 +91,10 @@ impl DraggableSetHolder {
         self.draggables_and_locs.push(element);
         self.draggables_and_locs.len() - 1
     }
+    fn retain(&mut self) {
+        self.draggables_and_locs
+            .retain(|draggable_and_coords| draggable_and_coords.draggable.borrow().retain());
+    }
 }
 struct DraggableBorrowAndCoordinates<'a> {
     draggable: ReferenceBorrow<'a, dyn Draggable>,
@@ -222,6 +226,7 @@ impl ObjectImpl for DragArea {
         let my_drag_translate = self.drag_translate.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
+                my_draggables.borrow_mut().retain();
                 for i in my_draggables.borrow().iter() {
                     let (trans_x, trans_y) = my_translate.get();
                     let (drag_trans_x, drag_trans_y) = my_drag_translate.get();
@@ -341,6 +346,7 @@ impl ObjectImpl for DragArea {
         }
         let my_draggables = self.draggables.clone();
         let my_translate = self.translate.clone();
+        let my_obj = self.obj().clone();
         let click = move |click_type: ClickType, x: f64, y: f64| {
             let (trans_x, trans_y) = my_translate.get();
             for draggable_and_coords in my_draggables.borrow().iter() {
@@ -355,6 +361,7 @@ impl ObjectImpl for DragArea {
                     }
                 }
             }
+            my_obj.queue_draw();
         };
         let left_click = GestureClick::new();
         left_click.set_button(1);

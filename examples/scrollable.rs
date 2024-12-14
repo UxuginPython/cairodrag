@@ -4,17 +4,40 @@ use cairo::{Context, Error};
 use cairodrag::*;
 use gtk4::prelude::*;
 use gtk4::{cairo, glib, Application, ApplicationWindow};
-const APP_ID: &str = "com.uxugin.cairodrag.example";
-struct Square(f64, f64, f64);
+use std::cell::Cell;
+const APP_ID: &str = "com.uxugin.cairodrag.example.scrollable";
+struct Square {
+    r: f64,
+    g: f64,
+    b: f64,
+    retain_flag: Cell<bool>,
+}
+impl Square {
+    fn new(r: f64, g: f64, b: f64) -> Self {
+        Self {
+            r: r,
+            g: g,
+            b: b,
+            retain_flag: Cell::new(true),
+        }
+    }
+}
 impl Draggable for Square {
     fn draw(&self, context: &Context, x: f64, y: f64) -> Result<(), Error> {
-        context.set_source_rgb(self.0, self.1, self.2);
+        context.set_source_rgb(self.r, self.g, self.b);
         context.rectangle(x, y, 100.0, 100.0);
         context.fill()?;
         Ok(())
     }
     fn get_limits(&self) -> (f64, f64, f64, f64) {
         (0.0, 100.0, 0.0, 100.0)
+    }
+    fn retain(&self) -> bool {
+        self.retain_flag.get()
+    }
+    fn on_middle_click(&self) {
+        println!("square middle clicked - removing");
+        self.retain_flag.set(false);
     }
 }
 struct Circle(f64, f64, f64);
@@ -47,8 +70,8 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 fn build_ui(app: &Application) {
-    let a = Box::new(Square(1.0, 0.0, 0.0));
-    let b = Box::new(Square(0.0, 0.0, 1.0));
+    let a = Box::new(Square::new(1.0, 0.0, 0.0));
+    let b = Box::new(Square::new(0.0, 0.0, 1.0));
     let c = Box::new(Circle(0.0, 1.0, 0.0));
     let drag_area = DragArea::new_scrollable(500, 500);
     drag_area.push_box(a, 100.0, 100.0);

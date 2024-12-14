@@ -31,6 +31,14 @@ pub trait Draggable {
     fn can_scroll(&self, x: f64, y: f64) -> bool {
         !self.contains(x, y)
     }
+    ///Returns whether to keep or remove the object. If this returns false, the object will be
+    ///removed from its [`DragArea`]; otherwise, nothing will change and it will still be drawn. It
+    ///is important to note that this method will not be called outside of the [`DragArea`] drawing
+    ///function, and to trigger removal of the object, the drawing function must be called *and*
+    ///this must return false during that call.
+    fn retain(&self) -> bool {
+        true
+    }
     ///Run when a point for which [`contains`](Self::contains) returns true is left double clicked.
     ///This is run when the click is pressed, not released.
     fn on_double_click(&self) {}
