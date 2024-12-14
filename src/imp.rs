@@ -188,8 +188,14 @@ impl DragArea {
     pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl FnMut() -> () + 'static>) {
         *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn FnMut() -> ()>);
     }
+    pub fn unset_pre_draw_func(&self) {
+        *self.pre_draw_func.borrow_mut() = None;
+    }
     pub fn set_post_draw_func(&self, post_draw_func: Box<impl FnMut() -> () + 'static>) {
         *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn FnMut() -> ()>);
+    }
+    pub fn unset_post_draw_func(&self) {
+        *self.post_draw_func.borrow_mut() = None;
     }
 }
 impl Default for DragArea {
