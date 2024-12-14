@@ -145,8 +145,8 @@ pub struct DragArea {
     scrolling: Rc<Cell<bool>>,
     translate: Rc<Cell<(f64, f64)>>,
     drag_translate: Rc<Cell<(f64, f64)>>,
-    pre_draw_func: Rc<RefCell<Option<Box<dyn FnMut() -> ()>>>>,
-    post_draw_func: Rc<RefCell<Option<Box<dyn FnMut() -> ()>>>>,
+    pre_draw_func: Rc<RefCell<Option<Box<dyn FnMut()>>>>,
+    post_draw_func: Rc<RefCell<Option<Box<dyn FnMut()>>>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -185,14 +185,14 @@ impl DragArea {
     pub fn set_scrollable(&self, scrollable: bool) {
         self.scrollable.set(scrollable);
     }
-    pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl FnMut() -> () + 'static>) {
-        *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn FnMut() -> ()>);
+    pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl FnMut() + 'static>) {
+        *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn FnMut()>);
     }
     pub fn unset_pre_draw_func(&self) {
         *self.pre_draw_func.borrow_mut() = None;
     }
-    pub fn set_post_draw_func(&self, post_draw_func: Box<impl FnMut() -> () + 'static>) {
-        *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn FnMut() -> ()>);
+    pub fn set_post_draw_func(&self, post_draw_func: Box<impl FnMut() + 'static>) {
+        *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn FnMut()>);
     }
     pub fn unset_post_draw_func(&self) {
         *self.post_draw_func.borrow_mut() = None;
@@ -218,11 +218,10 @@ impl ObjectSubclass for DragArea {
     type Type = super::DragArea;
     type ParentType = DrawingArea;
 }
-//                                                  width or height, whichever we're calculating
 fn calculate_limits(
     neg_limit: f64,
     pos_limit: f64,
-    area_size: i32,
+    area_size: i32, //width or height, whichever we're calculating
     scrollable: bool,
     desired_coord: f64,
 ) -> f64 {
@@ -270,10 +269,9 @@ impl ObjectImpl for DragArea {
         let my_scrolling = self.scrolling.clone();
         let my_translate = self.translate.clone();
         drag.connect_drag_begin(move |_gesture: &GestureDrag, x: f64, y: f64| {
-            let (trans_x, trans_y) = my_translate.get(); //drag_translate is always (0.0, 0.0) when
-                                                         //we're not actively dragging, which we're
-                                                         //not when the drag begin function is
-                                                         //called.
+            //drag_translate is always (0.0, 0.0) when we're not actively dragging, which we're not
+            //when the drag begin function is called.
+            let (trans_x, trans_y) = my_translate.get();
             let mut new_drag_info = None;
             let mut scrolling = true;
             for (i, draggable_and_coords) in my_draggables.borrow().iter().enumerate() {
