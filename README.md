@@ -12,3 +12,7 @@ This basically means that you can do whatever you want as long as you give me at
 - Initial release.
 ### 0.1.1
 - Change `DragArea::push_(box|rc|rc_ref_cell)` to `&self` instead of `&mut self` since they only rely on interior mutability internally.
+### 0.1.2
+- Make `DragArea` optionally scrollable. Use `DragArea::new_scrollable` instead of `new` to construct a scrollable `DragArea`.
+- Add `on_(double|middle|right)_click` methods to `Draggable` for handling mouse clicks on specific draggable objects.
+- Add `retain` method to `Draggable` to allow for removal of objects from their `DragArea`.
