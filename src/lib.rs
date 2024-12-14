@@ -31,6 +31,15 @@ pub trait Draggable {
     fn can_scroll(&self, x: f64, y: f64) -> bool {
         !self.contains(x, y)
     }
+    ///Run when a point for which [`contains`](Self::contains) returns true is left double clicked.
+    ///This is run when the click is pressed, not released.
+    fn on_double_click(&self) {}
+    ///Run when a point for which [`contains`](Self::contains) returns true is right single clicked.
+    ///This is run when the click is pressed, not released.
+    fn on_middle_click(&self) {}
+    ///Run when a point for which [`contains`](Self::contains) returns true is middle single clicked.
+    ///This is run when the click is pressed, not released.
+    fn on_right_click(&self) {}
 }
 glib::wrapper! {
     ///A subclass of [`gtk4::DrawingArea`] allowing for drag-and-drop of objects implementing the

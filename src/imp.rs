@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright 2024 UxuginPython
 use crate::Draggable;
-use gtk4::{glib, prelude::*, subclass::prelude::*, DrawingArea, GestureDrag};
+use gtk4::{glib, prelude::*, subclass::prelude::*, DrawingArea, GestureClick, GestureDrag};
 use std::cell::{Cell, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
@@ -326,6 +326,54 @@ impl ObjectImpl for DragArea {
             my_obj.queue_draw();
         });
         self.obj().add_controller(drag);
+        enum ClickType {
+            Double,
+            Middle,
+            Right,
+        }
+        let my_draggables = self.draggables.clone();
+        let my_translate = self.translate.clone();
+        let click = move |click_type: ClickType, x: f64, y: f64| {
+            let (trans_x, trans_y) = my_translate.get();
+            for draggable_and_coords in my_draggables.borrow().iter() {
+                if draggable_and_coords.draggable.contains(
+                    x - trans_x - draggable_and_coords.x,
+                    y - trans_y - draggable_and_coords.y,
+                ) {
+                    match click_type {
+                        ClickType::Double => draggable_and_coords.draggable.on_double_click(),
+                        ClickType::Middle => draggable_and_coords.draggable.on_middle_click(),
+                        ClickType::Right => draggable_and_coords.draggable.on_right_click(),
+                    }
+                }
+            }
+        };
+        let left_click = GestureClick::new();
+        left_click.set_button(1);
+        let my_click = click.clone();
+        left_click.connect_pressed(move |_, clicks, x, y| {
+            if clicks == 2 {
+                my_click(ClickType::Double, x, y);
+            }
+        });
+        self.obj().add_controller(left_click);
+        let middle_click = GestureClick::new();
+        middle_click.set_button(2);
+        let my_click = click.clone();
+        middle_click.connect_pressed(move |_, clicks, x, y| {
+            if clicks == 1 {
+                my_click(ClickType::Middle, x, y);
+            }
+        });
+        self.obj().add_controller(middle_click);
+        let right_click = GestureClick::new();
+        right_click.set_button(3);
+        right_click.connect_pressed(move |_, clicks, x, y| {
+            if clicks == 1 {
+                click(ClickType::Right, x, y);
+            }
+        });
+        self.obj().add_controller(right_click);
     }
 }
 impl WidgetImpl for DragArea {}

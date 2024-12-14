@@ -31,6 +31,15 @@ impl Draggable for Circle {
     fn contains(&self, x: f64, y: f64) -> bool {
         (x.powi(2) + y.powi(2)).sqrt() <= 50.0
     }
+    fn on_double_click(&self) {
+        println!("circle double clicked");
+    }
+    fn on_middle_click(&self) {
+        println!("circle middle clicked");
+    }
+    fn on_right_click(&self) {
+        println!("circle right clicked");
+    }
 }
 fn main() -> glib::ExitCode {
     let app = Application::builder().application_id(APP_ID).build();
