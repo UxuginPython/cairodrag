@@ -145,8 +145,8 @@ pub struct DragArea {
     scrolling: Rc<Cell<bool>>,
     translate: Rc<Cell<(f64, f64)>>,
     drag_translate: Rc<Cell<(f64, f64)>>,
-    pre_draw_func: Rc<RefCell<Option<Box<dyn Fn() -> ()>>>>,
-    post_draw_func: Rc<RefCell<Option<Box<dyn Fn() -> ()>>>>,
+    pre_draw_func: Rc<RefCell<Option<Box<dyn FnMut() -> ()>>>>,
+    post_draw_func: Rc<RefCell<Option<Box<dyn FnMut() -> ()>>>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -185,11 +185,11 @@ impl DragArea {
     pub fn set_scrollable(&self, scrollable: bool) {
         self.scrollable.set(scrollable);
     }
-    pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl Fn() -> () + 'static>) {
-        *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn Fn() -> ()>);
+    pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl FnMut() -> () + 'static>) {
+        *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn FnMut() -> ()>);
     }
-    pub fn set_post_draw_func(&self, post_draw_func: Box<impl Fn() -> () + 'static>) {
-        *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn Fn() -> ()>);
+    pub fn set_post_draw_func(&self, post_draw_func: Box<impl FnMut() -> () + 'static>) {
+        *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn FnMut() -> ()>);
     }
 }
 impl Default for DragArea {
@@ -240,7 +240,7 @@ impl ObjectImpl for DragArea {
         let my_post_draw_func = self.post_draw_func.clone();
         self.obj()
             .set_draw_func(move |_drawing_area, context, _width, _height| {
-                match &*my_pre_draw_func.borrow() {
+                match &mut *my_pre_draw_func.borrow_mut() {
                     Some(func) => (*func)(),
                     None => (),
                 }
@@ -252,7 +252,7 @@ impl ObjectImpl for DragArea {
                     let y = i.y + trans_y + drag_trans_y;
                     i.draggable.draw(&context, x, y).unwrap();
                 }
-                match &*my_post_draw_func.borrow() {
+                match &mut *my_post_draw_func.borrow_mut() {
                     Some(func) => (*func)(),
                     None => (),
                 }
