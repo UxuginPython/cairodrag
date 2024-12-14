@@ -16,3 +16,5 @@ This basically means that you can do whatever you want as long as you give me at
 - Make `DragArea` optionally scrollable. Use `DragArea::new_scrollable` instead of `new` to construct a scrollable `DragArea`.
 - Add `on_(double|middle|right)_click` methods to `Draggable` for handling mouse clicks on specific draggable objects.
 - Add `retain` method to `Draggable` to allow for removal of objects from their `DragArea`.
+### 0.1.3
+- Add `set_(pre|post)_draw_func` methods to `DragArea` that are run immediately before and after drawing and corresponding `unset_(pre|post)_draw_func` methods.
