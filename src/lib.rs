@@ -96,7 +96,10 @@ impl DragArea {
         self_imp.get_scroll_location()
     }
     ///Add a function to be called immediately called before every draw.
-    pub fn set_pre_draw_func(&self, pre_draw_func: impl FnMut() + 'static) {
+    pub fn set_pre_draw_func(
+        &self,
+        pre_draw_func: impl FnMut(&DrawingArea, &Context, i32, i32) + 'static,
+    ) {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.set_pre_draw_func(Box::new(pre_draw_func));
     }
@@ -106,7 +109,10 @@ impl DragArea {
         self_imp.unset_pre_draw_func();
     }
     ///Add a function to be called immediately after every draw.
-    pub fn set_post_draw_func(&self, post_draw_func: impl FnMut() + 'static) {
+    pub fn set_post_draw_func(
+        &self,
+        post_draw_func: impl FnMut(&DrawingArea, &Context, i32, i32) + 'static,
+    ) {
         let self_imp = imp::DragArea::from_obj(self);
         self_imp.set_post_draw_func(Box::new(post_draw_func));
     }

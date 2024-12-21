@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright 2024 UxuginPython
-use crate::Draggable;
+use crate::{Context, Draggable};
 use gtk4::{glib, prelude::*, subclass::prelude::*, DrawingArea, GestureClick, GestureDrag};
 use std::cell::{Cell, RefCell};
 use std::ops::Deref;
@@ -145,8 +145,8 @@ pub struct DragArea {
     scrolling: Rc<Cell<bool>>,
     translate: Rc<Cell<(f64, f64)>>,
     drag_translate: Rc<Cell<(f64, f64)>>,
-    pre_draw_func: Rc<RefCell<Option<Box<dyn FnMut()>>>>,
-    post_draw_func: Rc<RefCell<Option<Box<dyn FnMut()>>>>,
+    pre_draw_func: Rc<RefCell<Option<Box<dyn FnMut(&DrawingArea, &Context, i32, i32)>>>>,
+    post_draw_func: Rc<RefCell<Option<Box<dyn FnMut(&DrawingArea, &Context, i32, i32)>>>>,
 }
 impl DragArea {
     pub fn new() -> Self {
@@ -185,14 +185,22 @@ impl DragArea {
     pub fn set_scrollable(&self, scrollable: bool) {
         self.scrollable.set(scrollable);
     }
-    pub fn set_pre_draw_func(&self, pre_draw_func: Box<impl FnMut() + 'static>) {
-        *self.pre_draw_func.borrow_mut() = Some(pre_draw_func as Box<dyn FnMut()>);
+    pub fn set_pre_draw_func(
+        &self,
+        pre_draw_func: Box<impl FnMut(&DrawingArea, &Context, i32, i32) + 'static>,
+    ) {
+        *self.pre_draw_func.borrow_mut() =
+            Some(pre_draw_func as Box<dyn FnMut(&DrawingArea, &Context, i32, i32)>);
     }
     pub fn unset_pre_draw_func(&self) {
         *self.pre_draw_func.borrow_mut() = None;
     }
-    pub fn set_post_draw_func(&self, post_draw_func: Box<impl FnMut() + 'static>) {
-        *self.post_draw_func.borrow_mut() = Some(post_draw_func as Box<dyn FnMut()>);
+    pub fn set_post_draw_func(
+        &self,
+        post_draw_func: Box<impl FnMut(&DrawingArea, &Context, i32, i32) + 'static>,
+    ) {
+        *self.post_draw_func.borrow_mut() =
+            Some(post_draw_func as Box<dyn FnMut(&DrawingArea, &Context, i32, i32)>);
     }
     pub fn unset_post_draw_func(&self) {
         *self.post_draw_func.borrow_mut() = None;
@@ -244,9 +252,10 @@ impl ObjectImpl for DragArea {
         let my_pre_draw_func = self.pre_draw_func.clone();
         let my_post_draw_func = self.post_draw_func.clone();
         self.obj()
-            .set_draw_func(move |_drawing_area, context, _width, _height| {
+            .set_draw_func(move |drawing_area, context, width, height| {
                 match &mut *my_pre_draw_func.borrow_mut() {
-                    Some(func) => (*func)(),
+                    //This works because drawing_area and context are references.
+                    Some(func) => (*func)(drawing_area, context, width, height),
                     None => (),
                 }
                 my_draggables.borrow_mut().retain();
@@ -258,7 +267,7 @@ impl ObjectImpl for DragArea {
                     i.draggable.draw(&context, x, y).unwrap();
                 }
                 match &mut *my_post_draw_func.borrow_mut() {
-                    Some(func) => (*func)(),
+                    Some(func) => (*func)(drawing_area, context, width, height),
                     None => (),
                 }
             });
