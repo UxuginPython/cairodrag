@@ -18,3 +18,5 @@ This basically means that you can do whatever you want as long as you give me at
 - Add `retain` method to `Draggable` to allow for removal of objects from their `DragArea`.
 ### 0.1.3
 - Add `set_(pre|post)_draw_func` methods to `DragArea` that are run immediately before and after drawing and corresponding `unset_(pre|post)_draw_func` methods.
+### 0.2.0
+- Pass arguments from `DrawingArea` draw function to CairoDrag pre- and post-draw functions (set with `set_pre_draw_func` and `set_post_draw_func`).
